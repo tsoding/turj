@@ -16,6 +16,7 @@ Row :: struct {
 }
 
 parse_step :: (source: *string) -> step: Step, ok: bool {
+    // TODO: proper tokenizer
     step, ok := parse_token(source); if !ok return .LEFT, ok;
     if step == {
     case "<-"; return .LEFT,  true;
@@ -37,8 +38,15 @@ parse_row :: (source: *string) -> row: Row, ok: bool {
 }
 
 main :: () {
-    // TODO: accept file path through the arguments
-    file_path :: "paren.turj";
+    args := get_command_line_arguments();
+
+    if args.count < 2 {
+        print("Usage: % <input.turj>\n", args[0]);
+        print("ERROR: no input was provided");
+        exit(1);
+    }
+
+    file_path := args[1];
     content, ok := read_entire_file(file_path);
     if !ok {
         print("ERROR: could not read %\n", file_path);
@@ -53,6 +61,7 @@ main :: () {
     print("%\n", rows);
 
     tape: [..]string;
+    // TODO: customizable tape
     /* array_add(*tape, "0", "0", "1", "0", "1", "0"); */
     /* array_add(*tape, "@", "0", "1", "0", "1", "#", "1", "1", "0", "0"); */
     array_add(*tape, "(",  ")", "(", "(", ")", ")",  "#",  "0");
