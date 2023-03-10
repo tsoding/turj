@@ -39,7 +39,7 @@ Each `Rule` describes the following transition: Given that the current state is 
 
 If there is no `Rule` that describes the current `State` and `Read` of the machine it halts.
 
-An example of a program that increments a binary numbers on the tape written in an [LSB](https://en.wikipedia.org/wiki/Bit_numbering) order using symbols `0` and `1`:
+An example of a program that increments a binary number on the tape written in an [LSB](https://en.wikipedia.org/wiki/Bit_numbering) order using symbols `0` and `1`:
 
 ```rust
 I 0 1 -> H
@@ -52,7 +52,7 @@ Actually executing this program is the responsibility of the Command Language.
 
 As of right now Generative Language consist of [set definitions](https://en.wikipedia.org/wiki/Set_theory) and [universal quantifications](https://en.wikipedia.org/wiki/Universal_quantification) (Don't get scared! These concepts are relatively easy to understand intuitively by looking at some examples).
 
-### Defining Sets
+#### Defining Sets
 
 The syntax of the Set Definition:
 
@@ -64,13 +64,13 @@ Name          = Symbol
 Here is how it usually looks like:
 
 ```rust
-Bit = {0 1}
+Bit    = {0 1}
 Fruits = {Apple Banana Cherry}
 ```
 
 Set is just a collection of unique symbols (they can't repeat).
 
-### Universal Quantifier
+#### Universal Quantifier
 
 This construction extends the definition of the `Rule` in the following way:
 
@@ -80,14 +80,14 @@ Var  = Symbol
 Set  = Symbol
 ```
 
-This basically generates `N` rules where `N` is the size of `Set` for each element of `Set`. For example this code
+This basically generates `N` rules, where `N` is the size of `Set`, for each element of `Set`. For example this code:
 
 ```rust
 Fruits = {Apple Banana Cherry}
 Eat fruit Eaten -> Eat for fruit: Fruits
 ```
 
-expands into
+"expands" into
 
 ```rust
 Eat Apple  Eaten -> Eat
@@ -99,7 +99,7 @@ Which is basically a program that goes through the entire infinite tape of `Frui
 
 ### The Command Language
 
-Right the Command Language has only `#run` command. But I plan to add some stuff for debugging as well.
+Right now the Command Language has only `#run` command. But I plan to add some stuff for debugging as well.
 
 #### Running the program
 
@@ -109,7 +109,9 @@ Entry      = Symbol
 Tape       = "[" *(Symbol) "]"
 ```
 
-`Entry` is the initial state of the machine. `Tape` is the initial state of the tape. Let's take the the fruit eating program and run it:
+`Entry` is the initial state of the machine. `Tape` is the initial state of the tape.
+
+Let's take the the fruit eating program and run it:
 
 ```rust
 Fruits = {Apple Banana Cherry}
@@ -117,6 +119,8 @@ Eat fruit Eaten -> Eat for fruit: Fruits
 #run Eat [Apple Banna Cherry Cherry Apple Banana]
 ```
 
-You may have as many `#run` commands in a single file as you want. They are going to be executed in the order of their definition.
+You may have as many `#run` commands as you want in a single file. They are going to be executed in the order of their definition.
 
-The tape is actually infinite to the right (not to the left though). `Tape` defines only the first symbols. The rest of the infinite tape is initialized with the last `Symbol` of `Tape`. Thus `Tape` may not be empty (the Interpreter will tell you that anyway, so don't worry). If you "underflow" the tape to the left the Machine halts.
+The tape is actually infinite to the right (not to the left though, be careful with that). If you "underflow" the tape to the left the Machine halts.
+
+`Tape` defines only the first symbols. The rest of the infinite tape is initialized with the last `Symbol` of `Tape`. Thus `Tape` may not be empty (the Interpreter will tell you about that anyway, so don't worry).
