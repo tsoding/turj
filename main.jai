@@ -1,6 +1,7 @@
 #import "Basic";
 #import "String";
 #import "File";
+#load "lexer.jai";
 
 Step :: enum int {
     LEFT :: -1;
@@ -8,15 +9,14 @@ Step :: enum int {
 }
 
 Row :: struct {
-    state: string;
-    read: string;
-    write: string;
-    step: Step;
-    switch: string;
+    state: Token;
+    read: Token;
+    write: Token;
+    step: Token;
+    switch: Token;
 }
 
 parse_step :: (source: *string) -> step: Step, ok: bool {
-    // TODO: proper tokenizer
     step, ok := parse_token(source); if !ok return .LEFT, ok;
     if step == {
     case "<-"; return .LEFT,  true;
@@ -25,16 +25,33 @@ parse_step :: (source: *string) -> step: Step, ok: bool {
     return .LEFT, false;
 }
 
-parse_row :: (source: *string) -> row: Row, ok: bool {
+parse_row :: (lexer: *Lexer) -> row: Row, ok: bool {
     row: Row;
     ok: bool; 
-    step: string;
-    row.state,  ok = parse_token(source); if !ok return row, false;
-    row.read,   ok = parse_token(source); if !ok return row, false;
-    row.write,  ok = parse_token(source); if !ok return row, false;
-    row.step,   ok = parse_step(source);  if !ok return row, false;
-    row.switch, ok = parse_token(source); if !ok return row, false;
+    row.state,  ok = lexer_expect_token(lexer, .SYMBOL); if !ok return row, false;
+    row.read,   ok = lexer_expect_token(lexer, .SYMBOL); if !ok return row, false;
+    row.write,  ok = lexer_expect_token(lexer, .SYMBOL); if !ok return row, false;
+    row.step,   ok = lexer_expect_token(lexer, .ARROW);  if !ok return row, false;
+    row.switch, ok = lexer_expect_token(lexer, .SYMBOL); if !ok return row, false;
     return row, true;
+}
+
+lexer_expect_token :: (using lexer: *Lexer, kind: Token_Kind) -> token: Token, ok: bool {
+    token, result := lexer_next(lexer);
+    if #complete result == {
+        case .VALID; if token.kind == kind {
+            return token, true;
+        } else {
+            print("%:%:%: ERROR: expected % but got %\n", token.loc.file_path, token.loc.row, token.loc.col, kind, token.kind);
+            return token, false;
+        }
+        case .END; #through;
+        case .UNCLOSED_STRING; #through;
+        case .UNKNOWN; {
+            print("%:%:%: ERROR: expected % but got %\n", token.loc.file_path, token.loc.row, token.loc.col, kind, result);
+            return token, false;
+        }
+    }
 }
 
 main :: () {
@@ -50,26 +67,29 @@ main :: () {
     content, ok := read_entire_file(file_path);
     if !ok {
         print("ERROR: could not read %\n", file_path);
+        exit(1);
     }
+    lexer := lexer_from_string(content, file_path);
 
     rows: [..]Row;
-    for *split(content, "\n") {
-        row, ok := parse_row(it);
-        if ok then array_add(*rows, row);
+    _, result := lexer_peek(*lexer);
+    while result == .VALID {
+        row, ok := parse_row(*lexer);
+        if !ok then exit(1);
+        array_add(*rows, row);
+        _, result = lexer_peek(*lexer);
     }
-
-    print("%\n", rows);
 
     tape: [..]string;
     // TODO: customizable tape
-    /* array_add(*tape, "0", "0", "1", "0", "1", "0"); */
-    /* array_add(*tape, "@", "0", "1", "0", "1", "#", "1", "1", "0", "0"); */
+    // array_add(*tape, "0", "0", "1", "0", "1", "0");
+    // array_add(*tape, "@", "0", "1", "0", "1", "#", "1", "1", "0", "0");
     array_add(*tape, "(",  ")", "(", "(", ")", ")",  "#",  "0");
     assert(tape.count > 0);
     default: string = tape[tape.count - 1];
     head: int = 0;
     assert(rows.count > 0);
-    state: string = rows[0].state;
+    state: string = rows[0].state.text;
 
     while loop := true {
         while head >= tape.count {
@@ -91,10 +111,14 @@ main :: () {
         print("\n");
 
         for *rows {
-            if it.state == state && it.read == tape[head] {
-                tape[head] = it.write;
-                state      = it.switch;
-                head      += cast(int) it.step;
+            if it.state.text == state && it.read.text == tape[head] {
+                tape[head] = it.write.text;
+                state      = it.switch.text;
+                if it.step.text == {
+                    case "<-"; head -= 1;
+                    case "->"; head += 1;
+                    case; assert(false, "unreachable");
+                }
                 if head < 0 break loop;
                 continue loop;
             }
