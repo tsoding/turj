@@ -20,7 +20,7 @@ The Language consist of 3 sub-languages:
 
 ### The Base Language
 
-Base language is a sequence of `Rules`:
+Base language is a sequence of `Rules`. Here is its [ABNF](https://en.wikipedia.org/wiki/Augmented_Backus%E2%80%93Naur_form):
 
 ```abnf
 Rules          = *Rule
