@@ -5,6 +5,8 @@
 #run START ['(' ')' '#' 0]
 #run START [')' '(' '#' 0]
 
+Parens = { '(' ')' }
+
 START '(' '@' -> GO_INC
 START ')' '@' -> GO_DEC
 START '#' '#' -> CHECK

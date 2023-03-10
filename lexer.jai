@@ -10,6 +10,9 @@ Token_Kind :: enum {
     ARROW;
     OBRACKET;
     CBRACKET;
+    EQUALS;
+    OCURLY;
+    CCURLY;
 }
 
 Token :: struct {
@@ -84,6 +87,9 @@ LITERAL_TOKENS : []struct { prefix: string; kind: Token_Kind; } = .[
     .{"->", .ARROW},
     .{"[", .OBRACKET},
     .{"]", .CBRACKET},
+    .{"=", .EQUALS},
+    .{"{", .OCURLY},
+    .{"}", .CCURLY},
 ];
 
 is_symbol :: (x: u8) -> bool {

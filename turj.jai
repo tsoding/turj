@@ -25,74 +25,163 @@ parse_step :: (source: *string) -> step: Step, ok: bool {
     return .LEFT, false;
 }
 
-parse_row :: (lexer: *Lexer) -> row: Row, ok: bool {
-    row: Row;
-    ok: bool;
-    row.state,  ok = lexer_expect_token(lexer, .SYMBOL); if !ok return row, false;
-    row.read,   ok = lexer_expect_token(lexer, .SYMBOL); if !ok return row, false;
-    row.write,  ok = lexer_expect_token(lexer, .SYMBOL); if !ok return row, false;
-    row.step,   ok = lexer_expect_token(lexer, .ARROW);  if !ok return row, false;
-    row.switch, ok = lexer_expect_token(lexer, .SYMBOL); if !ok return row, false;
-    return row, true;
+Set :: struct {
+    name: Token;
+    items: [..]Token;
 }
 
-parse_run :: (lexer: *Lexer, rows: []Row) -> run: Run, ok: bool {
-    run: Run;
-    token, ok := lexer_expect_token(lexer, .COMMAND);
+Top_Level :: struct {
+    rows: [..]Row;
+    sets: [..]Set;
+    runs: [..]Run;
+}
 
-    if !ok return run, false;
-    if token.text == "#run" {
-        run.loc = token.loc;
+parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
+    ok: bool;
+    result: Lexer_Result;
 
-        token, ok = lexer_expect_token(lexer, .SYMBOL);
-        if !ok return run, false;
+    first: Token;
+    first, ok = lexer_expect_token(lexer, .SYMBOL, .COMMAND);
+    if !ok return false;
 
-        run.state = token.text;
+    if first.kind == {
+        case .COMMAND; {
+            if first.text == "#run" {
+                run: Run;
+                run.loc = first.loc;
 
-        token, ok = lexer_expect_token(lexer, .OBRACKET);
-        if !ok return run, false;
+                first, ok = lexer_expect_token(lexer, .SYMBOL);
+                if !ok return false;
 
-        result: Lexer_Result;
-        token, result = lexer_next(lexer);
-        while result == .VALID && token.kind != .CBRACKET {
-            array_add(*run.tape, token.text);
-            token, result = lexer_next(lexer);
+                run.state = first.text;
+
+                first, ok = lexer_expect_token(lexer, .OBRACKET);
+                if !ok return false;
+
+                result: Lexer_Result;
+                first, result = lexer_next(lexer);
+                while result == .VALID && first.kind != .CBRACKET {
+                    array_add(*run.tape, first.text);
+                    first, result = lexer_next(lexer);
+                }
+
+                if result != .VALID {
+                    print("%:%:%: ERROR: expected % but got %\n", first.loc.file_path, first.loc.row, first.loc.col, Token_Kind.CBRACKET, result);
+                    return false;
+                } else if first.kind != .CBRACKET {
+                    print("%:%:%: ERROR: expected % but got %\n", first.loc.file_path, first.loc.row, first.loc.col, Token_Kind.CBRACKET, first.kind);
+                    return false;
+                }
+
+                if run.tape.count == 0 {
+                    print("%:%:%: ERROR: tape may not be empty, because we are using the last symbol as the symbol the entire infinite tape is initialized with.\n", first.loc.file_path, first.loc.row, first.loc.col);
+                    return false;
+                }
+                run.default = run.tape[run.tape.count - 1];
+
+                array_add(*runs, run);
+
+                return true;
+            } else {
+                print("%:%:%: ERROR: unknown command %\n", first.loc.file_path, first.loc.row, first.loc.col, first.text);
+                return false;
+            }
         }
 
-        if result != .VALID {
-            print("%:%:%: ERROR: expected % but got %\n", token.loc.file_path, token.loc.row, token.loc.col, Token_Kind.CBRACKET, result);
-            return run, false;
-        } else if token.kind != .CBRACKET {
-            print("%:%:%: ERROR: expected % but got %\n", token.loc.file_path, token.loc.row, token.loc.col, Token_Kind.CBRACKET, token.kind);
-            return run, false;
+        case .SYMBOL; {
+            read_or_equal: Token;
+            read_or_equal, ok = lexer_expect_token(lexer, .SYMBOL, .EQUALS);
+            if !ok return false;
+
+            if read_or_equal.kind == {
+                case .SYMBOL; {
+                    row: Row;
+                    row.state = first;
+                    row.read = read_or_equal;
+                    row.write, ok = lexer_expect_token(lexer, .SYMBOL);
+                    if !ok return false;
+                    row.step, ok = lexer_expect_token(lexer, .ARROW);
+                    if !ok return false;
+                    row.switch, ok = lexer_expect_token(lexer, .SYMBOL);
+                    if !ok return false;
+                    array_add(*rows, row);
+                    return true;
+                }
+                case .EQUALS; {
+                    set: Set;
+                    set.name = first;
+
+                    ignore, next: Token;
+                    ignore, ok = lexer_expect_token(lexer, .OCURLY);
+                    if !ok return false;
+
+                    next, result = lexer_next(lexer);
+                    while result == .VALID && next.kind == .SYMBOL {
+                        // TODO: check if the symbols are unique
+                        array_add(*set.items, next);
+                        next, result = lexer_next(lexer);
+                    }
+
+                    if result != .VALID {
+                        print("%:%:%: ERROR: expected % but got %\n", next.loc.file_path, next.loc.row, next.loc.col, Token_Kind.CCURLY, result);
+                        return false;
+                    }
+
+                    if next.kind != .CCURLY {
+                        print("%:%:%: ERROR: expected % but got %\n", next.loc.file_path, next.loc.row, next.loc.col, Token_Kind.CCURLY, next.kind);
+                        return false;
+                    }
+
+                    array_add(*sets, set);
+
+                    return true;
+                }
+                case; {
+                    assert(false, "unreachable");
+                    return false;
+                }
+            }
         }
 
-        if run.tape.count == 0 {
-            print("%:%:%: ERROR: tape may not be empty, because we are using the last symbol as the symbol the entire infinite tape is initialized with.\n", token.loc.file_path, token.loc.row, token.loc.col);
-            return run, false;
+        case; {
+            assert(false, "unreachable");
+            return false;
         }
-        run.default = run.tape[run.tape.count - 1];
-
-        return run, true;
-    } else {
-        print("%:%:%: ERROR: unknown command %\n", token.loc.file_path, token.loc.row, token.loc.col, token.text);
-        return run, false;
     }
 }
 
-lexer_expect_token :: (using lexer: *Lexer, kind: Token_Kind) -> token: Token, ok: bool {
+lexer_expect_token :: (using lexer: *Lexer, kinds: .. Token_Kind) -> token: Token, ok: bool {
     token, result := lexer_next(lexer);
     if #complete result == {
-        case .VALID; if token.kind == kind {
-            return token, true;
-        } else {
-            print("%:%:%: ERROR: expected % but got %\n", token.loc.file_path, token.loc.row, token.loc.col, kind, token.kind);
+        case .VALID; {
+            for kinds {
+                if token.kind == it {
+                    return token, true;
+                }
+            }
+
+            sb: String_Builder;
+            for kinds {
+                if it_index > 0 then print_to_builder(*sb, " or");
+                print_to_builder(*sb, "%", it);
+            }
+
+            print("%:%:%: ERROR: expected % but got %\n",
+                  token.loc.file_path, token.loc.row, token.loc.col,
+                  builder_to_string(*sb),
+                  token.kind);
             return token, false;
         }
         case .END; #through;
         case .UNCLOSED_STRING; #through;
         case .UNKNOWN; {
-            print("%:%:%: ERROR: expected % but got %\n", token.loc.file_path, token.loc.row, token.loc.col, kind, result);
+            sb: String_Builder;
+            for kinds {
+                if it_index > 0 then print_to_builder(*sb, " or");
+                print_to_builder(*sb, "%", it);
+            }
+
+            print("%:%:%: ERROR: expected % but got %\n", token.loc.file_path, token.loc.row, token.loc.col, builder_to_string(*sb), result);
             return token, false;
         }
     }
@@ -165,23 +254,16 @@ main :: () {
     }
     lexer := lexer_from_string(content, file_path);
 
-    rows: [..]Row;
+    top_level: Top_Level;
     runs: [..]Run;
     first, result := lexer_peek(*lexer);
     while result == .VALID {
-        if first.kind == .COMMAND {
-            run, ok := parse_run(*lexer, rows);
-            if !ok then exit(1);
-            array_add(*runs, run);
-        } else {
-            row, ok := parse_row(*lexer);
-            if !ok then exit(1);
-            array_add(*rows, row);
-        }
+        ok := parse_top_level(*top_level, *lexer);
+        if !ok then exit(1);
         first, result = lexer_peek(*lexer);
     }
 
-    for *runs {
-        execute_run(it, rows);
+    for *top_level.runs {
+        execute_run(it, top_level.rows);
     }
 }
