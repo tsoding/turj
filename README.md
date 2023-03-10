@@ -37,9 +37,9 @@ QuotedSymbol   = "'" <any character even "'" but with the conventional backslash
 
 Each `Rule` describes the following transition: Given that the current state is `State` and the symbol under the head is `Read` replace that symbol with `Write` move the head in the direction of `Arrow` and switch the current state to `Next`.
 
-If the there is no `Rule` that describes the current `State` and `Read` of the machine it halts.
+If there is no `Rule` that describes the current `State` and `Read` of the machine it halts.
 
-An example of a program that increments a binary numbers on the tape written in an LSB order using symbols `0` and `1`:
+An example of a program that increments a binary numbers on the tape written in an [LSB](https://en.wikipedia.org/wiki/Bit_numbering) order using symbols `0` and `1`:
 
 ```rust
 I 0 1 -> H
