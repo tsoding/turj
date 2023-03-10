@@ -5,26 +5,12 @@
 
 // TODO: compound symbols
 
-Step :: enum int {
-    LEFT :: -1;
-    RIGHT :: 1;
-}
-
 Row :: struct {
     state: Token;
     read: Token;
     write: Token;
     step: Token;
     switch: Token;
-}
-
-parse_step :: (source: *string) -> step: Step, ok: bool {
-    step, ok := parse_token(source); if !ok return .LEFT, ok;
-    if step == {
-    case "<-"; return .LEFT,  true;
-    case "->"; return .RIGHT, true;
-    }
-    return .LEFT, false;
 }
 
 Set :: struct {
@@ -291,7 +277,7 @@ main :: () {
 
     if args.count < 2 {
         print("Usage: % <input.turj>\n", args[0]);
-        print("ERROR: no input was provided");
+        print("ERROR: no input was provided\n");
         exit(1);
     }
 
@@ -316,3 +302,4 @@ main :: () {
         execute_run(it, top_level.rows);
     }
 }
+
