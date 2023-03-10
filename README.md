@@ -4,5 +4,5 @@
 
 ```console
 $ jai-linux ./main.jai
-$ ./main ./examples/paren.turj
+$ ./main ./examples/04-paren.turj
 ```
