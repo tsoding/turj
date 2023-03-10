@@ -4,6 +4,7 @@
 #run START ['(' ')' '(' '(' ')' ')' '#' 0]
 #run START ['(' ')' '#' 0]
 #run START [')' '(' '#' 0]
+#run START ['(' ')' '(' '(' ')' '#' 0]
 
 Parens = { '(' ')' }
 
@@ -11,12 +12,13 @@ START '(' '@' -> GO_INC
 START ')' '@' -> GO_DEC
 START '#' '#' -> CHECK
 
-GO_INC '(' '(' -> GO_INC
-GO_INC ')' ')' -> GO_INC
+Bit = {0 1}
+Paren = {'(' ')'}
+
+GO_INC p p -> GO_INC for p: Paren
 GO_INC '#' '#' -> INC
 
-GO_DEC '(' '(' -> GO_DEC
-GO_DEC ')' ')' -> GO_DEC
+GO_DEC p p -> GO_DEC for p: Paren
 GO_DEC '#' '#' -> DEC
 
 INC 1 1 -> INC
@@ -29,8 +31,7 @@ UNDERFLOW 1 0 <- RESTART
 
 RESTART '#' '#' <- RESTART
 RESTART 1 1 <- RESTART
-RESTART '(' '(' <- RESTART
-RESTART ')' ')' <- RESTART
+RESTART  p   p  <- RESTART for p : Paren
 RESTART '@' '@' -> START
 
 CHECK 0 0 <- BALANCED

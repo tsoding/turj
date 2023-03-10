@@ -13,6 +13,8 @@ Token_Kind :: enum {
     EQUALS;
     OCURLY;
     CCURLY;
+    FOR;
+    COLON;
 }
 
 Token :: struct {
@@ -90,6 +92,7 @@ LITERAL_TOKENS : []struct { prefix: string; kind: Token_Kind; } = .[
     .{"=", .EQUALS},
     .{"{", .OCURLY},
     .{"}", .CCURLY},
+    .{":", .COLON},
 ];
 
 is_symbol :: (x: u8) -> bool {
@@ -125,6 +128,11 @@ lexer_chop_token :: (using lexer: *Lexer) -> token: Token, result: Lexer_Result 
             lexer_skip_char(lexer);
             token.text.count += 1;
         }
+
+        if token.text == "for" {
+            token.kind = .FOR;
+        }
+
         return token, .VALID;
     }
 

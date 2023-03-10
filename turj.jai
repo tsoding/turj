@@ -104,8 +104,55 @@ parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
                     if !ok return false;
                     row.switch, ok = lexer_expect_token(lexer, .SYMBOL);
                     if !ok return false;
-                    array_add(*rows, row);
-                    return true;
+
+                    for_token: Token;
+                    for_token, result = lexer_peek(lexer);
+                    if for_token.kind == .FOR {
+                        // Parens
+                        lexer_next(lexer);
+
+                        symbol: Token;
+                        symbol, ok = lexer_expect_token(lexer, .SYMBOL);
+                        if !ok return false;
+
+                        colon: Token;
+                        colon, ok = lexer_expect_token(lexer, .COLON);
+                        if !ok return false;
+
+                        // TODO: introduce the notion of Set expressions and parse the Set expression next in here
+                        set: Token;
+                        set, ok = lexer_expect_token(lexer, .SYMBOL);
+                        if !ok return false;
+
+                        // TODO: defer the expansion of `for` so we can define sets anywhere
+                        for sets {
+                            if it.name.text == set.text {
+                                for it.items {
+                                    row_from_template :: (template: Row, symbol: Token, replace: Token) -> Row {
+                                        using instance := template;
+                                        if state.text == symbol.text then state = replace;
+                                        if read.text == symbol.text then read = replace;
+                                        if write.text == symbol.text then write = replace;
+                                        // TODO: step should be also treated as replacible symbol in the templates
+                                        //if step.text == symbol.text then step = replace;
+                                        if switch.text == symbol.text then switch = replace;
+                                        return instance;
+                                    }
+
+                                    array_add(*rows, row_from_template(row, symbol, it));
+                                }
+                                return true;
+                            }
+                        }
+
+                        // TODO: nested for-s
+
+                        print("%:%:%: ERROR: set % does not exist\n", set.loc.file_path, set.loc.row, set.loc.col, set.text);
+                        return false;
+                    } else {
+                        array_add(*rows, row);
+                        return true;
+                    }
                 }
                 case .EQUALS; {
                     set: Set;
@@ -162,7 +209,7 @@ lexer_expect_token :: (using lexer: *Lexer, kinds: .. Token_Kind) -> token: Toke
 
             sb: String_Builder;
             for kinds {
-                if it_index > 0 then print_to_builder(*sb, " or");
+                if it_index > 0 then print_to_builder(*sb, " or ");
                 print_to_builder(*sb, "%", it);
             }
 
