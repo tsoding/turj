@@ -6,7 +6,10 @@ Loc :: struct {
 
 Token_Kind :: enum {
     SYMBOL;
+    COMMAND;
     ARROW;
+    OBRACKET;
+    CBRACKET;
 }
 
 Token :: struct {
@@ -79,6 +82,8 @@ Lexer_Result :: enum {
 LITERAL_TOKENS : []struct { prefix: string; kind: Token_Kind; } = .[
     .{"<-", .ARROW},
     .{"->", .ARROW},
+    .{"[", .OBRACKET},
+    .{"]", .CBRACKET},
 ];
 
 is_symbol :: (x: u8) -> bool {
@@ -110,6 +115,17 @@ lexer_chop_token :: (using lexer: *Lexer) -> token: Token, result: Lexer_Result 
 
     if is_symbol(content[cur]) {
         token.kind = .SYMBOL;
+        while cur < content.count && is_symbol(content[cur]) {
+            lexer_skip_char(lexer);
+            token.text.count += 1;
+        }
+        return token, .VALID;
+    }
+
+    if content[cur] == #char "#" {
+        token.kind = .COMMAND;
+        lexer_skip_char(lexer);
+        token.text.count += 1;
         while cur < content.count && is_symbol(content[cur]) {
             lexer_skip_char(lexer);
             token.text.count += 1;
