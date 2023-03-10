@@ -5,7 +5,7 @@
 
 // TODO: compound symbols
 
-Row :: struct {
+Rule :: struct {
     state: Token;
     read: Token;
     write: Token;
@@ -19,7 +19,7 @@ Set :: struct {
 }
 
 Top_Level :: struct {
-    rows: [..]Row;
+    rules: [..]Rule;
     sets: [..]Set;
     runs: [..]Run;
 }
@@ -83,14 +83,14 @@ parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
 
             if read_or_equal.kind == {
                 case .SYMBOL; {
-                    row: Row;
-                    row.state = first;
-                    row.read = read_or_equal;
-                    row.write, ok = lexer_expect_token(lexer, .SYMBOL);
+                    rule: Rule;
+                    rule.state = first;
+                    rule.read = read_or_equal;
+                    rule.write, ok = lexer_expect_token(lexer, .SYMBOL);
                     if !ok return false;
-                    row.step, ok = lexer_expect_token(lexer, .ARROW);
+                    rule.step, ok = lexer_expect_token(lexer, .ARROW);
                     if !ok return false;
-                    row.switch, ok = lexer_expect_token(lexer, .SYMBOL);
+                    rule.switch, ok = lexer_expect_token(lexer, .SYMBOL);
                     if !ok return false;
 
                     for_token: Token;
@@ -116,7 +116,7 @@ parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
                         for sets {
                             if it.name.text == set.text {
                                 for it.items {
-                                    row_from_template :: (template: Row, symbol: Token, replace: Token) -> Row {
+                                    rule_from_template :: (template: Rule, symbol: Token, replace: Token) -> Rule {
                                         using instance := template;
                                         if state.text == symbol.text then state = replace;
                                         if read.text == symbol.text then read = replace;
@@ -127,7 +127,7 @@ parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
                                         return instance;
                                     }
 
-                                    array_add(*rows, row_from_template(row, symbol, it));
+                                    array_add(*rules, rule_from_template(rule, symbol, it));
                                 }
                                 return true;
                             }
@@ -138,7 +138,7 @@ parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
                         print("%:%:%: ERROR: set % does not exist\n", set.loc.file_path, set.loc.row, set.loc.col, set.text);
                         return false;
                     } else {
-                        array_add(*rows, row);
+                        array_add(*rules, rule);
                         return true;
                     }
                 }
@@ -229,7 +229,7 @@ Run :: struct {
     loc: Loc;
 }
 
-execute_run :: (using run: *Run, rows: []Row) {
+execute_run :: (using run: *Run, rules: []Rule) {
     print("%:%:%: #run\n", loc.file_path, loc.row, loc.col);
 
     head: int = 0;
@@ -253,7 +253,7 @@ execute_run :: (using run: *Run, rows: []Row) {
         for head_start..head_end-1 print("^");
         print("\n");
 
-        for *rows {
+        for *rules {
             if it.state.text == state && it.read.text == tape[head] {
                 tape[head] = it.write.text;
                 state      = it.switch.text;
@@ -299,7 +299,7 @@ main :: () {
     }
 
     for *top_level.runs {
-        execute_run(it, top_level.rows);
+        execute_run(it, top_level.rules);
     }
 }
 
