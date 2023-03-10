@@ -3,6 +3,6 @@
 ## Quick Start
 
 ```console
-$ jai-linux ./main.jai
-$ ./main ./examples/04-paren.turj
+$ jai-linux ./turj.jai
+$ ./turj ./examples/04-paren.turj
 ```
