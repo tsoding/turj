@@ -20,7 +20,7 @@ The Language consist of 3 sub-languages:
 
 ### The Base Language
 
-Base language is a sequence of `Rules`. Here is its [ABNF](https://en.wikipedia.org/wiki/Augmented_Backus%E2%80%93Naur_form):
+Base Language is a sequence of `Rules`. Here is its [ABNF](https://en.wikipedia.org/wiki/Augmented_Backus%E2%80%93Naur_form):
 
 ```abnf
 Rules          = *Rule
@@ -49,5 +49,52 @@ I 1 0 -> I
 Actually executing this program is the responsibility of the Command Language.
 
 ### The Generative Language
+
+As of right now Generative Language consist of [set definitions](https://en.wikipedia.org/wiki/Set_theory) and [universal quantifications](https://en.wikipedia.org/wiki/Universal_quantification) (Don't get scared! These concepts are relatively easy to understand intuitively by looking at some examples).
+
+### Defining Sets
+
+The syntax of the Set Definition:
+
+```abnf
+SetDefinition = Name '=' '{' *Symbol '}'
+Name          = Symbol
+```
+
+Here is how it usually looks like:
+
+```rust
+Bit = {0 1}
+Fruits = {Apple Banana Cherry}
+```
+
+Set is just a collection of unique symbols (they can't repeat).
+
+### Universal Quantifier
+
+This construction extends the definition of the `Rule` in the following way:
+
+```abnf
+Rule = State Read Write Arrow Next ["for" Var ":" Set]
+Var  = Symbol
+Set  = Symbol
+```
+
+This basically generates `N` rules where `N` is the size of `Set` for each element of `Set`. For example this code
+
+```rust
+Fruits = {Apple Banana Cherry}
+Eat fruit Eaten -> Eat for fruit: Fruits
+```
+
+expands into
+
+```
+Eat Apple  Eaten -> Eat
+Eat Banana Eaten -> Eat
+Eat Cherry Eaten -> Eat
+```
+
+Which is basically a program that goes through the entire infinite tape of `Fruits` and eats all of them.
 
 ### The Command Language
