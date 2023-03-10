@@ -36,83 +36,47 @@ parse_row :: (lexer: *Lexer) -> row: Row, ok: bool {
     return row, true;
 }
 
-parse_command :: (lexer: *Lexer, rows: []Row) -> bool {
+parse_run :: (lexer: *Lexer, rows: []Row) -> run: Run, ok: bool {
+    run: Run;
     token, ok := lexer_expect_token(lexer, .COMMAND);
-    if !ok return false;
+
+    if !ok return run, false;
     if token.text == "#run" {
-        print("%:%:%: #run\n", token.loc.file_path, token.loc.row, token.loc.col);
+        run.loc = token.loc;
 
         token, ok = lexer_expect_token(lexer, .SYMBOL);
-        if !ok return false;
+        if !ok return run, false;
 
-        state := token.text;
+        run.state = token.text;
 
-        tape: [..]string;
         token, ok = lexer_expect_token(lexer, .OBRACKET);
-        if !ok return false;
+        if !ok return run, false;
 
         result: Lexer_Result;
         token, result = lexer_next(lexer);
         while result == .VALID && token.kind != .CBRACKET {
-            array_add(*tape, token.text);
+            array_add(*run.tape, token.text);
             token, result = lexer_next(lexer);
         }
 
         if result != .VALID {
             print("%:%:%: ERROR: expected % but got %\n", token.loc.file_path, token.loc.row, token.loc.col, Token_Kind.CBRACKET, result);
-            return false;
+            return run, false;
         } else if token.kind != .CBRACKET {
             print("%:%:%: ERROR: expected % but got %\n", token.loc.file_path, token.loc.row, token.loc.col, Token_Kind.CBRACKET, token.kind);
+            return run, false;
         }
 
-        if tape.count == 0 {
+        if run.tape.count == 0 {
             print("%:%:%: ERROR: tape may not be empty, because we are using the last symbol as the symbol the entire infinite tape is initialized with.\n", token.loc.file_path, token.loc.row, token.loc.col);
+            return run, false;
         }
-        default: string = tape[tape.count - 1];
+        run.default = run.tape[run.tape.count - 1];
 
-        head: int = 0;
-
-        while loop := true {
-            while head >= tape.count {
-                array_add(*tape, default);
-            }
-
-            sb : String_Builder;
-            print_to_builder(*sb, "%:", state);
-            head_start := 0;
-            head_end := 0;
-            for tape {
-                if it_index == head then head_start = builder_string_length(*sb) + 1;
-                print_to_builder(*sb, " %", it);
-                if it_index == head then head_end = builder_string_length(*sb);
-            }
-            print("%\n", builder_to_string(*sb));
-            for 0..head_start-1 print(" ");
-            for head_start..head_end-1 print("^");
-            print("\n");
-
-            for *rows {
-                if it.state.text == state && it.read.text == tape[head] {
-                    tape[head] = it.write.text;
-                    state      = it.switch.text;
-                    if it.step.text == {
-                        case "<-"; head -= 1;
-                        case "->"; head += 1;
-                        case; assert(false, "unreachable");
-                    }
-                    if head < 0 break loop;
-                    continue loop;
-                }
-            }
-            break loop;
-        }
-        
-        print("-- HALT --\n");
-
-        return true;
+        return run, true;
     } else {
         print("%:%:%: ERROR: unknown command %\n", token.loc.file_path, token.loc.row, token.loc.col, token.text);
-        return false;
+        return run, false;
     }
 }
 
@@ -134,6 +98,56 @@ lexer_expect_token :: (using lexer: *Lexer, kind: Token_Kind) -> token: Token, o
     }
 }
 
+Run :: struct {
+    state: string;
+    tape: [..]string;
+    default: string;
+    loc: Loc;
+}
+
+execute_run :: (using run: *Run, rows: []Row) {
+    print("%:%:%: #run\n", loc.file_path, loc.row, loc.col);
+
+    head: int = 0;
+
+    while loop := true {
+        while head >= tape.count {
+            array_add(*tape, default);
+        }
+
+        sb : String_Builder;
+        print_to_builder(*sb, "%:", state);
+        head_start := 0;
+        head_end := 0;
+        for tape {
+            if it_index == head then head_start = builder_string_length(*sb) + 1;
+            print_to_builder(*sb, " %", it);
+            if it_index == head then head_end = builder_string_length(*sb);
+        }
+        print("%\n", builder_to_string(*sb));
+        for 0..head_start-1 print(" ");
+        for head_start..head_end-1 print("^");
+        print("\n");
+
+        for *rows {
+            if it.state.text == state && it.read.text == tape[head] {
+                tape[head] = it.write.text;
+                state      = it.switch.text;
+                if it.step.text == {
+                    case "<-"; head -= 1;
+                    case "->"; head += 1;
+                    case; assert(false, "unreachable");
+                }
+                if head < 0 break loop;
+                continue loop;
+            }
+        }
+        break loop;
+    }
+
+    print("-- HALT --\n");
+}
+
 main :: () {
     args := get_command_line_arguments();
 
@@ -152,15 +166,22 @@ main :: () {
     lexer := lexer_from_string(content, file_path);
 
     rows: [..]Row;
+    runs: [..]Run;
     first, result := lexer_peek(*lexer);
     while result == .VALID {
         if first.kind == .COMMAND {
-            if !parse_command(*lexer, rows) then exit(1);
+            run, ok := parse_run(*lexer, rows);
+            if !ok then exit(1);
+            array_add(*runs, run);
         } else {
             row, ok := parse_row(*lexer);
             if !ok then exit(1);
             array_add(*rows, row);
         }
         first, result = lexer_peek(*lexer);
+    }
+
+    for *runs {
+        execute_run(it, rows);
     }
 }

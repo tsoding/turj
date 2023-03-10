@@ -1,6 +1,10 @@
 // -*- mode: rust -*-
 // Balanced Brackets
 
+#run START ['(' ')' '(' '(' ')' ')' '#' 0]
+#run START ['(' ')' '#' 0]
+#run START [')' '(' '#' 0]
+
 START '(' '@' -> GO_INC
 START ')' '@' -> GO_DEC
 START '#' '#' -> CHECK
@@ -29,7 +33,3 @@ RESTART '@' '@' -> START
 
 CHECK 0 0 <- BALANCED
 CHECK 1 1 <- UNBALANCED
-
-#run START ['(' ')' '(' '(' ')' ')' '#' 0]
-#run START ['(' ')' '#' 0]
-#run START [')' '(' '#' 0]
