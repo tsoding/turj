@@ -124,7 +124,7 @@ lexer_chop_token :: (using lexer: *Lexer) -> token: Token, result: Lexer_Result 
         while cur < content.count {
             if content[cur] == {
             case #char "'"; break;
-            // TODO: we do not actually unescape the escaped charaters
+            // TODO: we do not actually unescape the escaped characters
             case #char "\\";
                 lexer_skip_char(lexer);
                 token.text.count += 1;
