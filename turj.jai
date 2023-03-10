@@ -3,6 +3,8 @@
 #import "File";
 #load "lexer.jai";
 
+// TODO: compound symbols
+
 Step :: enum int {
     LEFT :: -1;
     RIGHT :: 1;
