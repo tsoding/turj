@@ -23,16 +23,16 @@ The Language consist of 3 sub-languages:
 Base language is a sequence of `Rules`:
 
 ```abnf
-Rules = *Rule
-Rule  = State Read Write Arrow Next
-State = Symbol
-Read  = Symbol
-Write = Symbol
-Arrow = '<-' / '->'
-Next  = Symbol
-Symbol = Unquoted_Symbol / Quoted_Symbol
-Unquoted_Symbol = 1*(DIGIT / ALPHA / '_')
-Quoted_Symbol = "'" <any character even "'" but with the conventional backslash escaping> "'"
+Rules          = *Rule
+Rule           = State Read Write Arrow Next
+State          = Symbol
+Read           = Symbol
+Write          = Symbol
+Arrow          = '<-' / '->'
+Next           = Symbol
+Symbol         = UnquotedSymbol / QuotedSymbol
+UnquotedSymbol = 1*(DIGIT / ALPHA / '_')
+QuotedSymbol   = "'" <any character even "'" but with the conventional backslash escaping> "'"
 ```
 
 Each `Rule` describes the following transition: Given that the current state is `State` and the symbol under the head is `Read` replace that symbol with `Write` move the head in the direction of `Arrow` and switch the current state to `Next`.
