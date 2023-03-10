@@ -120,7 +120,7 @@ Let's take the fruit eating program and run it:
 ```rust
 Fruits = {Apple Banana Cherry}
 Eat fruit Eaten -> Eat for fruit: Fruits
-#run Eat [Apple Banna Cherry Cherry Apple Banana NoMoreFruitsForYou]
+#run Eat [Apple Banana Cherry Cherry Apple Banana NoMoreFruitsForYou]
 ```
 
 You may have as many `#run` commands as you want in a single file. They are going to be executed in the order of their definition.
