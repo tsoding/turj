@@ -14,9 +14,9 @@ $ ./turj ./examples/04-paren.turj
 ## Language
 
 The Language consist of 3 sub-languages:
-1. The Base Language --- the language that describes the state transitions (rules) of the Turning Machine.
-2. The Generative Language --- a Declartive extension of the Base Language that enables us to generate the rules from sets of symbols.
-3. The Command Language --- basically a set of command to control the Machine. Start, debug, configure the tape, etc.
+1. The Base Language — the language that describes the state transitions (rules) of the Turning Machine.
+2. The Generative Language — a Declartive extension of the Base Language that enables us to generate the rules from sets of symbols.
+3. The Command Language — basically a set of command to control the Machine. Start, debug, configure the tape, etc.
 
 ### The Base Language
 
