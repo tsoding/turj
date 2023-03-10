@@ -10,7 +10,7 @@ Rule :: struct {
     read: Token;
     write: Token;
     step: Token;
-    switch: Token;
+    next: Token;
 }
 
 Set :: struct {
@@ -90,7 +90,7 @@ parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
                     if !ok return false;
                     rule.step, ok = lexer_expect_token(lexer, .ARROW);
                     if !ok return false;
-                    rule.switch, ok = lexer_expect_token(lexer, .SYMBOL);
+                    rule.next, ok = lexer_expect_token(lexer, .SYMBOL);
                     if !ok return false;
 
                     for_token: Token;
@@ -123,7 +123,7 @@ parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
                                         if write.text == symbol.text then write = replace;
                                         // TODO: step should be also treated as replacible symbol in the templates
                                         //if step.text == symbol.text then step = replace;
-                                        if switch.text == symbol.text then switch = replace;
+                                        if next.text == symbol.text then next = replace;
                                         return instance;
                                     }
 
@@ -256,7 +256,7 @@ execute_run :: (using run: *Run, rules: []Rule) {
         for *rules {
             if it.state.text == state && it.read.text == tape[head] {
                 tape[head] = it.write.text;
-                state      = it.switch.text;
+                state      = it.next.text;
                 if it.step.text == {
                     case "<-"; head -= 1;
                     case "->"; head += 1;
@@ -302,4 +302,3 @@ main :: () {
         execute_run(it, top_level.rules);
     }
 }
-
