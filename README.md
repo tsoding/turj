@@ -4,6 +4,8 @@ This is an [Esoteric](https://en.wikipedia.org/wiki/Esoteric_programming_languag
 
 Check out [./examples/](./examples/) folder and have fun.
 
+*The name sucks, I know. I'm thinking about a better one.*
+
 ## Quick Start
 
 ```console
