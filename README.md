@@ -89,7 +89,7 @@ Eat fruit Eaten -> Eat for fruit: Fruits
 
 expands into
 
-```
+```rust
 Eat Apple  Eaten -> Eat
 Eat Banana Eaten -> Eat
 Eat Cherry Eaten -> Eat
@@ -98,3 +98,25 @@ Eat Cherry Eaten -> Eat
 Which is basically a program that goes through the entire infinite tape of `Fruits` and eats all of them.
 
 ### The Command Language
+
+Right the Command Language has only `#run` command. But I plan to add some stuff for debugging as well.
+
+#### Running the program
+
+```abnf
+RunCommand = "#run" Entry Tape
+Entry      = Symbol
+Tape       = "[" *(Symbol) "]"
+```
+
+`Entry` is the initial state of the machine. `Tape` is the initial state of the tape. Let's take the the fruit eating program and run it:
+
+```rust
+Fruits = {Apple Banana Cherry}
+Eat fruit Eaten -> Eat for fruit: Fruits
+#run Eat [Apple Banna Cherry Cherry Apple Banana]
+```
+
+You may have as many `#run` commands in a single file as you want. They are going to be executed in the order of their definition.
+
+The tape is actually infinite to the right (not to the left though). `Tape` defines only the first symbols. The rest of the infinite tape is initialized with the last `Symbol` of `Tape`. Thus `Tape` may not be empty (the Interpreter will tell you that anyway, so don't worry). If you "underflow" the tape to the left the Machine halts.
