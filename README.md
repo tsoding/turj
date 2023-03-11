@@ -13,7 +13,12 @@ $ jai-linux ./turj.jai
 $ ./turj ./examples/04-paren.turj
 ```
 
-*You need to have an access to the Jai Programming Language, sorry. I'm thinking about possible workarounds for those who don't have it.*
+If you don't have an access to Jai just use the C version in [./c/](./c/):
+
+```console
+$ cc -o turj ./c/turj.jai
+$ ./turj ./examples/04-paren.turj
+```
 
 ## Language
 
