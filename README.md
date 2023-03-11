@@ -16,7 +16,7 @@ $ ./turj ./examples/04-paren.turj
 If you don't have an access to Jai just use the C version in [./c/](./c/):
 
 ```console
-$ cc -o turj ./c/turj.jai
+$ cc -o turj ./c/turj.c
 $ ./turj ./examples/04-paren.turj
 ```
 
