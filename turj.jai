@@ -24,6 +24,13 @@ Top_Level :: struct {
     runs: [..]Run;
 }
 
+Run :: struct {
+    state: Token;
+    tape: [..]Token;
+    default: Token;
+    loc: Loc;
+}
+
 parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
     first: Token;
     if !lexer_expect_token(lexer, *first, .SYMBOL, .COMMAND) return false;
@@ -35,13 +42,13 @@ parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
 
                 if !lexer_expect_token(lexer, *first, .SYMBOL) return false;
 
-                run.state = first.text;
+                run.state = first;
 
                 if !lexer_expect_token(lexer, *first, .OBRACKET) return false;
 
                 while lexer_peek(lexer, *first) == .VALID && first.kind == .SYMBOL {
                     lexer_next(lexer, *first);
-                    array_add(*run.tape, first.text);
+                    array_add(*run.tape, first);
                 }
                 if !lexer_expect_token(lexer, *first, .CBRACKET) return false;
 
@@ -189,13 +196,6 @@ lexer_expect_token :: (using lexer: *Lexer, token: *Token, kinds: .. Token_Kind)
     }
 }
 
-Run :: struct {
-    state: string;
-    tape: [..]string;
-    default: string;
-    loc: Loc;
-}
-
 execute_run :: (using run: *Run, rules: []Rule) {
     print("%:%:%: #run\n", loc.file_path, loc.row, loc.col);
 
@@ -222,9 +222,9 @@ execute_run :: (using run: *Run, rules: []Rule) {
         print("\n");
 
         for *rules {
-            if it.state.text == state && it.read.text == tape[head] {
-                tape[head] = it.write.text;
-                state      = it.next.text;
+            if it.state.text == state.text && it.read.text == tape[head].text {
+                tape[head] = it.write;
+                state      = it.next;
                 if it.step.text == {
                     case "<-"; head -= 1;
                     case "->"; head += 1;
