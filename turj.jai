@@ -25,41 +25,25 @@ Top_Level :: struct {
 }
 
 parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
-    ok: bool;
-    result: Lexer_Result;
-
     first: Token;
-    first, ok = lexer_expect_token(lexer, .SYMBOL, .COMMAND);
-    if !ok return false;
-
+    if !lexer_expect_token(lexer, *first, .SYMBOL, .COMMAND) return false;
     if first.kind == {
         case .COMMAND; {
             if first.text == "#run" {
                 run: Run;
                 run.loc = first.loc;
 
-                first, ok = lexer_expect_token(lexer, .SYMBOL);
-                if !ok return false;
+                if !lexer_expect_token(lexer, *first, .SYMBOL) return false;
 
                 run.state = first.text;
 
-                first, ok = lexer_expect_token(lexer, .OBRACKET);
-                if !ok return false;
+                if !lexer_expect_token(lexer, *first, .OBRACKET) return false;
 
-                result: Lexer_Result;
-                first, result = lexer_next(lexer);
-                while result == .VALID && first.kind != .CBRACKET {
+                while lexer_peek(lexer, *first) == .VALID && first.kind == .SYMBOL {
+                    lexer_next(lexer, *first);
                     array_add(*run.tape, first.text);
-                    first, result = lexer_next(lexer);
                 }
-
-                if result != .VALID {
-                    print("%:%:%: ERROR: expected % but got %\n", first.loc.file_path, first.loc.row, first.loc.col, Token_Kind.CBRACKET, result);
-                    return false;
-                } else if first.kind != .CBRACKET {
-                    print("%:%:%: ERROR: expected % but got %\n", first.loc.file_path, first.loc.row, first.loc.col, Token_Kind.CBRACKET, first.kind);
-                    return false;
-                }
+                if !lexer_expect_token(lexer, *first, .CBRACKET) return false;
 
                 if run.tape.count == 0 {
                     print("%:%:%: ERROR: tape may not be empty, because we are using the last symbol as the symbol the entire infinite tape is initialized with.\n", first.loc.file_path, first.loc.row, first.loc.col);
@@ -78,39 +62,30 @@ parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
 
         case .SYMBOL; {
             read_or_equal: Token;
-            read_or_equal, ok = lexer_expect_token(lexer, .SYMBOL, .EQUALS);
-            if !ok return false;
+            if !lexer_expect_token(lexer, *read_or_equal, .SYMBOL, .EQUALS) return false;
 
             if read_or_equal.kind == {
                 case .SYMBOL; {
                     rule: Rule;
                     rule.state = first;
                     rule.read = read_or_equal;
-                    rule.write, ok = lexer_expect_token(lexer, .SYMBOL);
-                    if !ok return false;
-                    rule.step, ok = lexer_expect_token(lexer, .ARROW);
-                    if !ok return false;
-                    rule.next, ok = lexer_expect_token(lexer, .SYMBOL);
-                    if !ok return false;
+                    if !lexer_expect_token(lexer, *rule.write, .SYMBOL) return false;
+                    if !lexer_expect_token(lexer, *rule.step, .ARROW)   return false;
+                    if !lexer_expect_token(lexer, *rule.next, .SYMBOL)  return false;
 
                     for_token: Token;
-                    for_token, result = lexer_peek(lexer);
-                    if for_token.kind == .FOR {
-                        // Parens
-                        lexer_next(lexer);
+                    if lexer_peek(lexer, *for_token) == .VALID && for_token.kind == .FOR {
+                        lexer_next(lexer, *for_token);
 
                         symbol: Token;
-                        symbol, ok = lexer_expect_token(lexer, .SYMBOL);
-                        if !ok return false;
+                        if !lexer_expect_token(lexer, *symbol, .SYMBOL) return false;
 
                         colon: Token;
-                        colon, ok = lexer_expect_token(lexer, .COLON);
-                        if !ok return false;
+                        if !lexer_expect_token(lexer, *colon, .COLON) return false;
 
                         // TODO: introduce the notion of Set expressions and parse the Set expression next in here
                         set: Token;
-                        set, ok = lexer_expect_token(lexer, .SYMBOL);
-                        if !ok return false;
+                        if !lexer_expect_token(lexer, *set, .SYMBOL) return false;
 
                         // TODO: defer the expansion of `for` so we can define sets anywhere
                         for sets {
@@ -146,26 +121,16 @@ parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
                     set: Set;
                     set.name = first;
 
-                    ignore, next: Token;
-                    ignore, ok = lexer_expect_token(lexer, .OCURLY);
-                    if !ok return false;
+                    ignore: Token;
+                    if !lexer_expect_token(lexer, *ignore, .OCURLY) return false;
 
-                    next, result = lexer_next(lexer);
-                    while result == .VALID && next.kind == .SYMBOL {
+                    next: Token;
+                    while lexer_peek(lexer, *next) == .VALID && next.kind == .SYMBOL {
+                        lexer_next(lexer, *next);
                         // TODO: check if the symbols are unique
                         array_add(*set.items, next);
-                        next, result = lexer_next(lexer);
                     }
-
-                    if result != .VALID {
-                        print("%:%:%: ERROR: expected % but got %\n", next.loc.file_path, next.loc.row, next.loc.col, Token_Kind.CCURLY, result);
-                        return false;
-                    }
-
-                    if next.kind != .CCURLY {
-                        print("%:%:%: ERROR: expected % but got %\n", next.loc.file_path, next.loc.row, next.loc.col, Token_Kind.CCURLY, next.kind);
-                        return false;
-                    }
+                    if !lexer_expect_token(lexer, *next, .CCURLY) return false;
 
                     array_add(*sets, set);
 
@@ -185,13 +150,13 @@ parse_top_level :: (using top_level: *Top_Level, lexer: *Lexer) -> ok: bool {
     }
 }
 
-lexer_expect_token :: (using lexer: *Lexer, kinds: .. Token_Kind) -> token: Token, ok: bool {
-    token, result := lexer_next(lexer);
+lexer_expect_token :: (using lexer: *Lexer, token: *Token, kinds: .. Token_Kind) -> bool {
+    result := lexer_next(lexer, token);
     if #complete result == {
         case .VALID; {
             for kinds {
                 if token.kind == it {
-                    return token, true;
+                    return true;
                 }
             }
 
@@ -203,9 +168,10 @@ lexer_expect_token :: (using lexer: *Lexer, kinds: .. Token_Kind) -> token: Toke
 
             print("%:%:%: ERROR: expected % but got %\n",
                   token.loc.file_path, token.loc.row, token.loc.col,
+                  // TODO: free the string from String_Builder
                   builder_to_string(*sb),
                   token.kind);
-            return token, false;
+            return false;
         }
         case .END; #through;
         case .UNCLOSED_STRING; #through;
@@ -216,8 +182,9 @@ lexer_expect_token :: (using lexer: *Lexer, kinds: .. Token_Kind) -> token: Toke
                 print_to_builder(*sb, "%", it);
             }
 
+            // TODO: free the string from String_Builder
             print("%:%:%: ERROR: expected % but got %\n", token.loc.file_path, token.loc.row, token.loc.col, builder_to_string(*sb), result);
-            return token, false;
+            return false;
         }
     }
 }
@@ -248,6 +215,7 @@ execute_run :: (using run: *Run, rules: []Rule) {
             print_to_builder(*sb, " %", it);
             if it_index == head then head_end = builder_string_length(*sb);
         }
+        // TODO: free the string from String_Builder
         print("%\n", builder_to_string(*sb));
         for 0..head_start-1 print(" ");
         for head_start..head_end-1 print("^");
@@ -291,11 +259,9 @@ main :: () {
 
     top_level: Top_Level;
     runs: [..]Run;
-    first, result := lexer_peek(*lexer);
-    while result == .VALID {
-        ok := parse_top_level(*top_level, *lexer);
-        if !ok then exit(1);
-        first, result = lexer_peek(*lexer);
+    first: Token;
+    while lexer_peek(*lexer, *first) == .VALID {
+        if !parse_top_level(*top_level, *lexer) then exit(1);
     }
 
     for *top_level.runs {

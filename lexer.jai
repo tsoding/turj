@@ -99,26 +99,26 @@ is_symbol :: (x: u8) -> bool {
     return is_alnum(x) || x == #char "_";
 }
 
-lexer_chop_token :: (using lexer: *Lexer) -> token: Token, result: Lexer_Result {
+lexer_chop_token :: (using lexer: *Lexer, token: *Token) -> Lexer_Result {
     lexer_trim_left(lexer);
     while cur < content.count && lexer_starts_with(lexer, "//") {
         lexer_skip_line(lexer);
         lexer_trim_left(lexer);
     }
 
-    token : Token;
+    memset(token, 0, size_of(Token));
     token.loc = lexer_loc(lexer);
     token.text.data = content.data + cur;
     token.text.count = 0;
 
-    if cur >= content.count return token, .END;
+    if cur >= content.count return .END;
 
     for LITERAL_TOKENS {
         if lexer_starts_with(lexer, it.prefix) {
             lexer_skip_char(lexer, it.prefix.count);
             token.kind = it.kind;
             token.text.count += it.prefix.count;
-            return token, .VALID;
+            return .VALID;
         }
     }
 
@@ -133,7 +133,7 @@ lexer_chop_token :: (using lexer: *Lexer) -> token: Token, result: Lexer_Result 
             token.kind = .FOR;
         }
 
-        return token, .VALID;
+        return .VALID;
     }
 
     if content[cur] == #char "#" {
@@ -144,7 +144,7 @@ lexer_chop_token :: (using lexer: *Lexer) -> token: Token, result: Lexer_Result 
             lexer_skip_char(lexer);
             token.text.count += 1;
         }
-        return token, .VALID;
+        return .VALID;
     }
 
     if content[cur] == #char "'" {
@@ -158,7 +158,7 @@ lexer_chop_token :: (using lexer: *Lexer) -> token: Token, result: Lexer_Result 
             case #char "\\";
                 lexer_skip_char(lexer);
                 token.text.count += 1;
-                if cur < content.count return token, .UNCLOSED_STRING;
+                if cur < content.count return .UNCLOSED_STRING;
                 lexer_skip_char(lexer);
                 token.text.count += 1;
             case;
@@ -167,29 +167,30 @@ lexer_chop_token :: (using lexer: *Lexer) -> token: Token, result: Lexer_Result 
             }
         }
 
-        if cur >= content.count return token, .UNCLOSED_STRING;
+        if cur >= content.count return .UNCLOSED_STRING;
         lexer_skip_char(lexer);
-        return token, .VALID;
+        return .VALID;
     }
 
     lexer_skip_char(lexer);
     token.text.count += 1;
-    return token, .UNKNOWN;
+    return .UNKNOWN;
 }
 
-lexer_next :: (using lexer: *Lexer) -> Token, Lexer_Result {
+lexer_next :: (using lexer: *Lexer, token: *Token) -> Lexer_Result {
     if peek_full {
         peek_full = false;
-        return peek_token, peek_result;
+        <<token = peek_token;
+        return peek_result;
     }
-    token, result := lexer_chop_token(lexer);
-    return token, result;
+    return lexer_chop_token(lexer, token);
 }
 
-lexer_peek :: (using lexer: *Lexer) -> Token, Lexer_Result {
+lexer_peek :: (using lexer: *Lexer, token: *Token) -> Lexer_Result {
     if !peek_full {
-        peek_token, peek_result = lexer_chop_token(lexer);
+        peek_result = lexer_chop_token(lexer, *peek_token);
         peek_full = true;
     }
-    return peek_token, peek_result;
+    <<token = peek_token;
+    return peek_result;
 }
